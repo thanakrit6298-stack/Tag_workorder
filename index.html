@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop — Work Order Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+/* ════════════════════════════════════
+   MIDNIGHT STEEL — Engineering Theme
+   Deep Navy · Cyan · Electric Status
+════════════════════════════════════ */
+:root{
+  --bg:    #05111e;
+  --bg2:   #030d17;
+  --s1:    #0a1d2f;
+  --s2:    #0f2540;
+  --s3:    #142e4f;
+  --b1:    #163050;
+  --b2:    #1f4068;
+
+  --cyan:  #06b6d4; --cyan-hi:#22d3ee; --cyan-lo:rgba(6,182,212,.08); --cyan-bd:rgba(6,182,212,.22);
+  --green: #10b981; --grn-hi: #34d399;  --grn-lo: rgba(16,185,129,.1);  --grn-bd: rgba(16,185,129,.25);
+  --amber: #f59e0b; --amb-hi: #fbbf24;  --amb-lo: rgba(245,158,11,.1);  --amb-bd: rgba(245,158,11,.25);
+  --red:   #ef4444; --red-hi: #f87171;  --red-lo: rgba(239,68,68,.1);   --red-bd: rgba(239,68,68,.25);
+  --blue:  #3b82f6; --blu-hi: #60a5fa;  --blu-lo: rgba(59,130,246,.1);  --blu-bd: rgba(59,130,246,.25);
+
+  --hi:    #d4eaf7;
+  --mid:   #6b9ab8;
+  --lo:    #2e5470;
+
+  --font:  'IBM Plex Sans','IBM Plex Sans Thai',sans-serif;
+  --mono:  'IBM Plex Mono',monospace;
+  --r:5px; --r2:3px; --sw:262px; --th:56px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body{
+  background:var(--bg);color:var(--hi);
+  font-family:var(--font);font-size:14px;line-height:1.55;
+  min-height:100vh;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(6,182,212,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(6,182,212,.025) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;z-index:0;
+}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+#shell{display:flex;min-height:100vh;position:relative;z-index:1}
+
+#sidebar{
+  width:var(--sw);background:var(--bg2);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;
+  z-index:100;border-right:1px solid var(--b1);
+  overflow:hidden;
+}
+#sidebar::before{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--cyan-hi) 0%,var(--blue) 50%,var(--cyan) 100%);
+  box-shadow:0 0 12px rgba(6,182,212,.5);
+}
+
+#sb-logo{
+  padding:20px 20px 18px 22px;
+  border-bottom:1px solid var(--b1);
+  background:linear-gradient(135deg,rgba(6,182,212,.06) 0%,transparent 100%);
+}
+.logo-tag{
+  font-family:var(--mono);font-size:9px;color:var(--cyan);
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.logo-tag::before{content:'';width:18px;height:1.5px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.logo-name{font-size:18px;font-weight:700;color:var(--hi);line-height:1.2;letter-spacing:-.3px}
+.logo-name span{color:var(--cyan)}
+.logo-ver{font-family:var(--mono);font-size:9px;color:var(--lo);margin-top:6px;letter-spacing:1.5px}
+
+#sb-kpi{padding:14px 16px;border-bottom:1px solid var(--b1);display:flex;flex-direction:column;gap:6px}
+.kpi-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:var(--r);
+  border:1px solid var(--b1);background:var(--s1);
+  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+}
+.kpi-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.kpi-row:hover{border-color:var(--b2);background:var(--s2)}
+.kpi-row.active{border-color:var(--b2);background:var(--s2)}
+.kpi-row.k-all::before{background:var(--mid)}
+.kpi-row.k-pend::before{background:var(--amber)}
+.kpi-row.k-prog::before{background:var(--blue)}
+.kpi-row.k-done::before{background:var(--green)}
+.kpi-row.k-hold::before{background:var(--red)}
+.kpi-row.active::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,182,212,.06) 0%,transparent 100%);pointer-events:none}
+.kpi-lbl{font-size:11px;color:var(--mid)}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:600;line-height:1}
+.kpi-row.k-all .kpi-val{color:var(--hi)}
+.kpi-row.k-pend .kpi-val{color:var(--amb-hi)}
+.kpi-row.k-prog .kpi-val{color:var(--blu-hi)}
+.kpi-row.k-done .kpi-val{color:var(--grn-hi)}
+.kpi-row.k-hold .kpi-val{color:var(--red-hi)}
+
+#sb-nav{flex:1;overflow-y:auto;padding:12px 10px}
+#sb-nav::-webkit-scrollbar{width:3px}
+.nav-section{font-family:var(--mono);font-size:9px;color:var(--lo);letter-spacing:2.5px;padding:8px 10px 4px;text-transform:uppercase}
+.nav-item{
+  display:flex;align-items:center;gap:9px;width:100%;
+  padding:9px 12px;background:transparent;border:none;
+  border-left:2px solid transparent;color:var(--mid);
+  font-family:var(--font);font-size:13px;
+  border-radius:0 var(--r) var(--r) 0;cursor:pointer;
+  text-align:left;transition:all .15s;
+}
+.nav-item:hover{background:var(--s2);color:var(--hi);border-left-color:var(--b2)}
+.nav-item.active{
+  background:var(--cyan-lo);color:var(--cyan-hi);
+  border-left-color:var(--cyan);font-weight:500;
+}
+.nav-ico{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+.nav-ct{margin-left:auto;font-family:var(--mono);font-size:9px;background:var(--s3);border:1px solid var(--b2);border-radius:10px;padding:1px 7px;color:var(--lo)}
+.nav-item.active .nav-ct{background:var(--cyan-lo);border-color:var(--cyan-bd);color:var(--cyan)}
+
+#main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column}
+
+#topbar{
+  height:var(--th);background:var(--bg2);
+  border-bottom:1px solid var(--b1);
+  padding:0 22px;display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:50;
+}
+.tb-breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--lo);font-family:var(--mono)}
+.tb-sep{opacity:.3}
+.tb-cur{color:var(--hi);font-weight:500}
+
+.search-wrap{
+  display:flex;align-items:center;gap:8px;
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:24px;padding:7px 14px;transition:all .2s;
+}
+.search-wrap:focus-within{border-color:var(--cyan-bd);box-shadow:0 0 0 3px var(--cyan-lo)}
+.search-wrap svg{color:var(--lo);flex-shrink:0}
+#search-input{border:none;background:transparent;outline:none;font-family:var(--font);font-size:13px;color:var(--hi);width:180px}
+#search-input::placeholder{color:var(--lo)}
+
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:24px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;font-family:var(--font);transition:all .2s;letter-spacing:.3px;white-space:nowrap}
+.btn-ghost{background:transparent;border-color:var(--b2);color:var(--mid)}
+.btn-ghost:hover{background:var(--s2);border-color:var(--b2);color:var(--hi)}
+.btn-cyan{background:var(--cyan);border-color:var(--cyan);color:#042030;font-weight:700}
+.btn-cyan:hover{background:var(--cyan-hi);border-color:var(--cyan-hi)}
+.btn-red{background:transparent;border-color:var(--red-bd);color:var(--red)}
+.btn-red:hover{background:var(--red-lo)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-icon{width:34px;height:34px;padding:0;border-radius:var(--r);display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--b2);color:var(--mid);cursor:pointer;transition:all .2s}
+.btn-icon:hover{background:var(--s2);border-color:var(--b2);color:var(--hi)}
+
+.mode-badge{display:none;align-items:center;gap:5px;padding:3px 10px;border-radius:3px;font-family:var(--mono);font-size:9px;letter-spacing:1px;font-weight:600}
+.mode-badge.pub{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:var(--grn-hi)}
+.mode-badge.adm{background:var(--cyan-lo);border:1px solid var(--cyan-bd);color:var(--cyan-hi)}
+
+#content{padding:20px 22px 60px;flex:1}
+
+.wo-row{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:var(--r);margin-bottom:7px;
+  display:flex;align-items:stretch;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+  position:relative;
+}
+.wo-row:hover{border-color:var(--b2);box-shadow:0 2px 16px rgba(0,0,0,.3),0 0 0 1px var(--b2)}
+
+.wo-stripe{width:4px;flex-shrink:0;border-radius:var(--r) 0 0 var(--r)}
+.st-pending   .wo-stripe{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.st-inProgress.wo-stripe{background:var(--blue); box-shadow:0 0 8px var(--blue)}
+.st-done      .wo-stripe{background:var(--green);box-shadow:0 0 8px var(--green)}
+.st-hold      .wo-stripe{background:var(--red);  box-shadow:0 0 8px var(--red)}
+
+.wo-body{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.wo-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wo-num{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  color:var(--cyan);background:var(--cyan-lo);
+  border:1px solid var(--cyan-bd);padding:2px 8px;
+  border-radius:var(--r2);letter-spacing:.8px;flex-shrink:0;
+}
+.wo-name{font-size:15px;font-weight:700;color:var(--hi);line-height:1.3}
+.wo-meta{display:flex;gap:0;flex-wrap:wrap}
+.meta-chip{
+  display:flex;align-items:center;gap:4px;
+  font-size:11px;color:var(--mid);font-family:var(--mono);
+  padding:3px 10px;border-right:1px solid var(--b1);
+}
+.meta-chip:first-child{padding-left:0}
+.meta-chip:last-child{border-right:none}
+.meta-ico{font-size:11px}
+.wo-detail{
+  font-size:12px;color:var(--mid);line-height:1.6;
+  padding:7px 10px;background:var(--bg);
+  border-radius:var(--r2);border-left:2px solid var(--b2);
+}
+
+.st-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r2);font-size:11px;font-weight:600;border:1px solid;font-family:var(--mono);letter-spacing:.3px;flex-shrink:0}
+.st-pill::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.st-pill.p-pending   {background:var(--amb-lo);color:var(--amb-hi);border-color:var(--amb-bd)}.st-pill.p-pending::before{background:var(--amber);box-shadow:0 0 4px var(--amber)}
+.st-pill.p-inProgress{background:var(--blu-lo);color:var(--blu-hi);border-color:var(--blu-bd)}.st-pill.p-inProgress::before{background:var(--blue);box-shadow:0 0 4px var(--blue)}
+.st-pill.p-done      {background:var(--grn-lo);color:var(--grn-hi);border-color:var(--grn-bd)}.st-pill.p-done::before{background:var(--green);box-shadow:0 0 4px var(--green)}
+.st-pill.p-hold      {background:var(--red-lo);color:var(--red-hi);border-color:var(--red-bd)}.st-pill.p-hold::before{background:var(--red);box-shadow:0 0 4px var(--red)}
+.urg-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r2);font-size:9px;font-weight:700;letter-spacing:.8px;background:var(--red-lo);color:var(--red-hi);border:1px solid var(--red-bd);font-family:var(--mono);flex-shrink:0}
+
+.wo-ctrl{
+  display:flex;flex-direction:column;gap:4px;
+  padding:10px 12px;border-left:1px solid var(--b1);
+  justify-content:center;min-width:148px;flex-shrink:0;
+}
+.sc-btn{
+  padding:5px 8px;border:1px solid var(--b2);
+  border-radius:var(--r2);background:transparent;
+  color:var(--lo);font-family:var(--font);font-size:11px;
+  cursor:pointer;text-align:left;transition:all .15s;
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.sc-btn::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.sc-btn:hover{background:var(--s3);border-color:var(--b2);color:var(--hi)}
+.sc-btn.act-p{background:var(--amb-lo);color:var(--amb-hi);border-color:var(--amb-bd);font-weight:600}.sc-btn.act-p::before{background:var(--amber)}
+.sc-btn.act-i{background:var(--blu-lo);color:var(--blu-hi);border-color:var(--blu-bd);font-weight:600}.sc-btn.act-i::before{background:var(--blue)}
+.sc-btn.act-d{background:var(--grn-lo);color:var(--grn-hi);border-color:var(--grn-bd);font-weight:600}.sc-btn.act-d::before{background:var(--green)}
+.sc-btn.act-h{background:var(--red-lo);color:var(--red-hi);border-color:var(--red-bd);font-weight:600}.sc-btn.act-h::before{background:var(--red)}
+.sc-divider{height:1px;background:var(--b1);margin:3px 0}
+.sc-qr{border-color:var(--cyan-bd)!important;color:var(--cyan)!important}
+.sc-qr:hover{background:var(--cyan-lo)!important}
+.sc-qr::before{background:var(--cyan)!important}
+
+.wo-actions{display:flex;flex-direction:column;gap:4px;padding:10px 10px;border-left:1px solid var(--b1);justify-content:center}
+.ra-btn{width:28px;height:28px;border:1px solid var(--b1);border-radius:var(--r2);background:transparent;color:var(--lo);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;transition:all .15s}
+.ra-btn:hover{background:var(--s3);border-color:var(--b2);color:var(--hi)}
+.ra-btn.del:hover{background:var(--red-lo);border-color:var(--red-bd);color:var(--red-hi)}
+
+.empty-state{text-align:center;padding:56px 20px;color:var(--lo)}
+.e-ring{width:56px;height:56px;border:2px solid var(--b2);border-top-color:var(--cyan);border-radius:50%;margin:0 auto 16px;animation:spin .9s linear infinite}
+.e-ico{font-size:32px;margin-bottom:12px;opacity:.4}
+.e-txt{font-size:13px;font-family:var(--mono);margin-bottom:4px;color:var(--mid)}
+.e-sub{font-size:11px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(2,8,16,.85);backdrop-filter:blur(8px);z-index:300;align-items:center;justify-content:center;padding:24px}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:0;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px var(--b1);animation:modalIn .22s ease;overflow:hidden;width:100%}
+@keyframes modalIn{from{opacity:0;transform:translateY(-12px) scale(.98)}to{opacity:1;transform:none}}
+.modal-box.md{max-width:480px}.modal-box.lg{max-width:600px;max-height:90vh;overflow-y:auto}.modal-box.sm{max-width:360px;text-align:center}
+
+.m-hd{
+  display:flex;align-items:center;gap:12px;padding:18px 22px;
+  border-bottom:1px solid var(--b1);
+  background:linear-gradient(90deg,rgba(6,182,212,.05) 0%,transparent 100%);
+}
+.m-tag{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:var(--r2);letter-spacing:1.5px;font-weight:600}
+.m-tag.cy{background:var(--cyan);color:#042030}.m-tag.bl{background:var(--blue);color:#fff}.m-tag.rd{background:var(--red);color:#fff}
+.m-ttl{font-size:15px;font-weight:700;color:var(--hi);flex:1}
+.m-sub{font-size:11px;color:var(--lo);margin-top:1px}
+.m-x{width:26px;height:26px;border-radius:50%;border:1px solid var(--b2);background:transparent;color:var(--lo);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15px}
+.m-x:hover{background:var(--red-lo);color:var(--red-hi);border-color:var(--red-bd)}
+.m-body{padding:20px 22px}
+.m-ft{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--b1);background:rgba(0,0,0,.2)}
+
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg1{display:flex;flex-direction:column;gap:5px}
+.fg1.full{grid-column:1/-1}
+.flbl{font-family:var(--mono);font-size:9px;color:var(--cyan);letter-spacing:1.8px;text-transform:uppercase;font-weight:600}
+.fi,.fs,.fta{
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:var(--r);color:var(--hi);
+  font-family:var(--font);font-size:13px;padding:9px 11px;outline:none;
+  transition:border-color .2s,box-shadow .2s;width:100%;
+}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--cyan-bd);box-shadow:0 0 0 3px var(--cyan-lo);background:var(--s3)}
+.fta{resize:vertical;min-height:72px;line-height:1.6}
+.fs{cursor:pointer}.fs option{background:var(--s2)}
+
+.tab-strip{display:flex;gap:4px;background:var(--bg);border-radius:var(--r);padding:3px;margin-bottom:14px;border:1px solid var(--b1)}
+.tab-btn{padding:6px 16px;border:none;border-radius:var(--r2);font-size:12px;cursor:pointer;background:transparent;color:var(--mid);font-family:var(--font);font-weight:500;transition:all .2s}
+.tab-btn.active{background:var(--s2);color:var(--cyan-hi);border:1px solid var(--cyan-bd)}
+.set-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--b1)}
+.set-item:last-child{border-bottom:none}
+.set-dot{width:6px;height:6px;background:var(--cyan);border-radius:50%;flex-shrink:0;box-shadow:0 0 5px var(--cyan)}
+.set-txt{flex:1;font-size:13px;color:var(--hi)}
+.set-acts{display:flex;gap:5px}
+.s-btn{padding:4px 10px;border-radius:var(--r2);font-size:11px;cursor:pointer;border:1px solid;font-family:var(--font);transition:all .15s;font-weight:500}
+.s-btn.ed{background:var(--blu-lo);border-color:var(--blu-bd);color:var(--blu-hi)}
+.s-btn.dl{background:var(--red-lo);border-color:var(--red-bd);color:var(--red-hi)}
+.s-btn.sv{background:var(--grn-lo);border-color:var(--grn-bd);color:var(--grn-hi)}
+.s-btn.cx{background:var(--s3);border-color:var(--b2);color:var(--mid)}
+.add-row{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)}
+
+.tag-box{border:1px solid var(--b2);border-radius:6px;padding:15px;background:var(--bg);margin-bottom:14px;position:relative;overflow:hidden}
+.tag-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--blue))}
+.tag-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.tag-wono{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:.5px;margin-bottom:3px}
+.tag-job{font-size:13px;font-weight:700;color:var(--hi);max-width:175px;line-height:1.3}
+.tag-qr-wrap{flex-shrink:0;background:#fff;border-radius:6px;padding:5px;border:1px solid var(--b2)}
+.tag-ft{border-top:1px solid var(--b1);padding-top:9px;font-size:10px;color:var(--mid);display:flex;flex-direction:column;gap:3px;font-family:var(--mono)}
+.qr-center{display:flex;justify-content:center;margin-bottom:14px}
+.qr-center img{border-radius:8px;background:#fff;padding:6px;border:1px solid var(--b2)}
+.url-block{background:var(--bg);border:1px solid var(--cyan-bd);border-radius:var(--r);padding:10px 12px;margin-bottom:12px}
+.url-lbl{font-family:var(--mono);font-size:9px;color:var(--cyan);letter-spacing:1.5px;margin-bottom:4px;text-transform:uppercase}
+.url-val{font-size:11px;color:var(--blu-hi);word-break:break-all;text-decoration:none;font-family:var(--mono)}
+.url-val:hover{color:var(--cyan-hi);text-decoration:underline}
+
+.c-ico{font-size:28px;margin:8px 0 10px}
+.c-ttl{font-size:15px;font-weight:700;margin-bottom:5px}
+.c-sub{font-size:12px;color:var(--mid);margin-bottom:20px}
+.c-row{display:flex;gap:8px;justify-content:center}
+
+/* ── LOADING SCREEN ── */
+#loading-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .4s}
+#loading-screen.hidden{opacity:0;pointer-events:none}
+.ld-logo{font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:3px;display:flex;align-items:center;gap:8px}
+.ld-logo::before,.ld-logo::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--cyan));max-width:40px}
+.ld-logo::after{background:linear-gradient(90deg,var(--cyan),transparent)}
+.ld-ring{width:44px;height:44px;border:2px solid var(--b2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;box-shadow:0 0 12px rgba(6,182,212,.2)}
+.ld-txt{font-family:var(--mono);font-size:10px;color:var(--lo);letter-spacing:2px}
+
+#toast{position:fixed;bottom:22px;right:22px;background:var(--s2);color:var(--hi);font-size:12px;padding:10px 16px;border-radius:var(--r);border:1px solid var(--b2);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:999;display:flex;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px var(--b1);min-width:200px}
+#toast.show{transform:translateY(0);opacity:1}
+.toast-ok{color:var(--grn-hi);font-size:15px;flex-shrink:0}
+.toast-warn{color:var(--amb-hi);font-size:15px;flex-shrink:0}
+
+/* ═══════════════════ VIEWER ═══════════════════ */
+#viewer{display:none;min-height:100vh;background:var(--bg)}
+.vw-top-bar{height:4px}
+.vw-top-bar.st-pending   {background:linear-gradient(90deg,var(--amber),var(--amb-hi));box-shadow:0 0 10px rgba(245,158,11,.5)}
+.vw-top-bar.st-inProgress{background:linear-gradient(90deg,var(--blue),var(--blu-hi));box-shadow:0 0 10px rgba(59,130,246,.5)}
+.vw-top-bar.st-done      {background:linear-gradient(90deg,var(--green),var(--grn-hi));box-shadow:0 0 10px rgba(16,185,129,.5)}
+.vw-top-bar.st-hold      {background:linear-gradient(90deg,var(--red),var(--red-hi));box-shadow:0 0 10px rgba(239,68,68,.5)}
+.vw-nav{background:var(--bg2);padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--b1)}
+.vw-ico{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--blue));display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#042030;flex-shrink:0}
+.vw-title{font-size:14px;font-weight:700;color:var(--hi)}
+.vw-sub{font-size:10px;color:var(--lo);font-family:var(--mono);letter-spacing:1px;margin-top:1px}
+.vw-body{max-width:500px;margin:0 auto;padding:16px 18px 48px}
+.vw-wono{font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:.5px;margin-top:16px;margin-bottom:4px}
+.vw-name{font-size:22px;font-weight:800;color:var(--hi);line-height:1.25;margin-bottom:12px}
+.vw-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+.vw-card{background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:15px 16px;margin-bottom:10px}
+.vw-card-lbl{font-family:var(--mono);font-size:9px;color:var(--lo);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;font-weight:600}
+.vw-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)}
+.vw-row:last-child{border-bottom:none;padding-bottom:0}
+.vw-rio{width:28px;height:28px;border-radius:6px;background:var(--cyan-lo);border:1px solid var(--cyan-bd);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.vw-lbl{font-size:10px;color:var(--lo);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono);margin-bottom:2px}
+.vw-val{font-size:14px;font-weight:600;color:var(--hi)}
+.vw-det{font-size:13px;color:var(--mid);line-height:1.75}
+.vw-err{text-align:center;padding:60px 20px;color:var(--lo)}
+.vw-err .e-ico{opacity:.3}
+
+#ham-btn{display:none;width:36px;height:36px;border:1px solid var(--b2);border-radius:var(--r);background:transparent;color:var(--hi);font-size:18px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(2,8,16,.8);z-index:99}
+#sb-overlay.open{display:block}
+.fab{position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--cyan);border:none;color:#042030;font-size:22px;font-weight:700;cursor:pointer;box-shadow:0 6px 24px rgba(6,182,212,.45);display:none;align-items:center;justify-content:center;z-index:80;transition:all .2s}
+.fab:hover{background:var(--cyan-hi);transform:scale(1.08)}
+
+@media(max-width:768px){
+  #shell{flex-direction:column}
+  #main{margin-left:0}
+  #sidebar{width:280px;transform:translateX(-110%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+  #sidebar.open{transform:translateX(0);box-shadow:12px 0 48px rgba(0,0,0,.6)}
+  #topbar{padding:0 14px;gap:9px}
+  #ham-btn{display:flex}
+  #search-wrap{flex:1}.search-wrap{flex:1}
+  #search-input{width:100%}
+  #content{padding:14px 12px 56px}
+  .wo-ctrl{display:none}.wo-actions{display:none}
+  .fg{grid-template-columns:1fr}.fg1.full{grid-column:1}
+  .modal-bg{align-items:flex-end;padding:0}
+  .modal-box{border-radius:8px 8px 0 0;max-width:100%!important;max-height:92vh}
+  #toast{left:12px;right:12px;bottom:70px}
+  .fab{display:flex}
+}
+@media print{
+  #shell,#topbar,body>*:not(#tag-modal){display:none!important}
+  .modal-bg{position:static;background:none;padding:0}
+  .modal-box{box-shadow:none;border:none}
+  .m-hd,.m-ft,.url-block,#print-btn{display:none!important}
+  .tag-box{border:2px dashed #999;background:#fff;color:#000}
+  .tag-wono,.tag-job,.tag-ft{color:#000}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="ld-logo">WORKSHOP WORK ORDER SYSTEM</div>
+  <div class="ld-ring"></div>
+  <div class="ld-txt">INITIALIZING · CONNECTING TO DATABASE</div>
+</div>
+
+<!-- ══════════════ VIEWER MODE (QR SCAN) ══════════════ -->
+<div id="viewer">
+  <div class="vw-top-bar" id="vw-bar"></div>
+  <div class="vw-nav">
+    <div class="vw-ico">WO</div>
+    <div>
+      <div class="vw-title">Workshop Work Order</div>
+      <div class="vw-sub">LIVE DATA · REALTIME</div>
+    </div>
+  </div>
+  <div class="vw-body" id="vw-body">
+    <div class="empty-state"><div class="e-ring"></div><div class="e-txt">LOADING DATA...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div id="shell">
+<div id="sb-overlay" onclick="closeSB()"></div>
+<div id="sidebar">
+  <div id="sb-logo">
+    <div class="logo-tag">Workshop · WO System</div>
+    <div class="logo-name">Work <span>Order</span><br>Management</div>
+    <div class="logo-ver">WMS · v2.1 · REALTIME DB</div>
+  </div>
+  <div id="sb-kpi">
+    <div class="kpi-row k-all" id="kpi-all" onclick="setFilter('all')"><span class="kpi-lbl">TOTAL ORDERS</span><span class="kpi-val" id="k-all">0</span></div>
+    <div class="kpi-row k-pend" id="kpi-pend" onclick="setFilter('pending')"><span class="kpi-lbl">PENDING</span><span class="kpi-val" id="k-pend">0</span></div>
+    <div class="kpi-row k-prog" id="kpi-prog" onclick="setFilter('inProgress')"><span class="kpi-lbl">IN PROGRESS</span><span class="kpi-val" id="k-prog">0</span></div>
+    <div class="kpi-row k-done" id="kpi-done" onclick="setFilter('done')"><span class="kpi-lbl">COMPLETED</span><span class="kpi-val" id="k-done">0</span></div>
+    <div class="kpi-row k-hold" id="kpi-hold" onclick="setFilter('hold')"><span class="kpi-lbl">ON HOLD</span><span class="kpi-val" id="k-hold">0</span></div>
+  </div>
+  <div id="sb-nav">
+    <div class="nav-section">// Job Type</div>
+    <div id="nav-types"></div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <button id="ham-btn" onclick="toggleSB()">☰</button>
+    <div class="tb-breadcrumb">
+      WORKSHOP<span class="tb-sep">/</span>FABRICATION<span class="tb-sep">/</span>
+      <span class="tb-cur" id="tb-cur">ALL ORDERS</span>
+    </div>
+    <div class="search-wrap">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search-input" type="text" placeholder="Search work orders...">
+    </div>
+    <div class="tb-r">
+      <div class="mode-badge pub" id="badge-pub">⬤ PUBLIC VIEW</div>
+      <div class="mode-badge adm" id="badge-adm">⬤ ADMIN MODE</div>
+      <button class="btn btn-cyan" id="btn-add" onclick="openAdd()" style="display:none">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        NEW WORK ORDER
+      </button>
+      <button class="btn-icon" id="btn-set" onclick="openSettings()" title="Settings" style="display:none">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33A1.65 1.65 0 0 0 14 18.35V19a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 17.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 13a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 7a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 2.68a1.65 1.65 0 0 0 1-1.51V1a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="btn btn-red btn-sm" id="btn-logout" onclick="logout()" style="display:none">LOGOUT</button>
+      <button class="btn btn-ghost btn-sm" id="btn-login" onclick="openLogin()">🔐 ADMIN</button>
+    </div>
+  </div>
+  <div id="content"></div>
+</div>
+</div>
+
+<button class="fab" id="fab" onclick="openAdd()" title="New Work Order">+</button>
+
+<!-- LOGIN -->
+<div id="login-modal" class="modal-bg" onclick="bgClose(event,'login-modal')">
+<div class="modal-box md">
+  <div class="m-hd"><span class="m-tag cy">AUTH</span><div><div class="m-ttl">Admin Access</div><div class="m-sub">Enter administrator password</div></div><button class="m-x" onclick="closeLogin()">✕</button></div>
+  <div class="m-body">
+    <div class="fg1" style="margin-bottom:10px"><label class="flbl">Password</label><input class="fi" id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="lerr" style="font-size:11px;color:var(--red-hi);display:none;font-family:var(--mono);letter-spacing:.5px">⚠ ACCESS DENIED — INCORRECT PASSWORD</div>
+  </div>
+  <div class="m-ft"><button class="btn btn-ghost" onclick="closeLogin()">Cancel</button><button class="btn btn-cyan" onclick="doLogin()">AUTHENTICATE</button></div>
+</div>
+</div>
+
+<!-- CREATE/EDIT -->
+<div id="edit-modal" class="modal-bg" onclick="bgClose(event,'edit-modal')">
+<div class="modal-box lg">
+  <div class="m-hd"><span class="m-tag cy" id="me-tag">NEW WO</span><div><div class="m-ttl" id="me-ttl">Create Work Order</div><div class="m-sub" id="me-sub">Fill in all required fields</div></div><button class="m-x" onclick="closeEdit()">✕</button></div>
+  <div class="m-body">
+    <div class="fg">
+      <div class="fg1"><label class="flbl">WO Number (auto if empty)</label><input class="fi" id="f-wono" placeholder="Auto-generated"></div>
+      <div class="fg1"><label class="flbl">Priority Level</label><select class="fs" id="f-prio"><option>ปกติ (NORMAL)</option><option>ด่วน (URGENT)</option><option>ต่ำ (LOW)</option></select></div>
+      <div class="fg1 full"><label class="flbl">Job Name *</label><input class="fi" id="f-name" placeholder="e.g. ซ่อมแขนกล, กลึงเพลาใหม่, เชื่อมโครงสร้าง..."></div>
+      <div class="fg1"><label class="flbl">Area / Department *</label><select class="fs" id="f-area"></select></div>
+      <div class="fg1"><label class="flbl">Job Type *</label><select class="fs" id="f-type"></select></div>
+      <div class="fg1"><label class="flbl">Date Received</label><input class="fi" id="f-start" type="date"></div>
+      <div class="fg1"><label class="flbl">Due Date</label><input class="fi" id="f-due" type="date"></div>
+      <div class="fg1"><label class="flbl">Requested By</label><input class="fi" id="f-req" placeholder="Name / Department"></div>
+      <div class="fg1"><label class="flbl">Initial Status</label>
+        <select class="fs" id="f-stat">
+          <option value="pending">⏳ รอดำเนินการ</option>
+          <option value="inProgress">⚙ กำลังดำเนินการ</option>
+          <option value="done">✓ เสร็จสิ้น</option>
+          <option value="hold">⛔ รอชิ้นส่วน / Hold</option>
+        </select>
+      </div>
+      <div class="fg1 full"><label class="flbl">Details / Notes</label><textarea class="fta" id="f-det" placeholder="Describe the task, fault, or requirements..."></textarea></div>
+    </div>
+  </div>
+  <div class="m-ft"><button class="btn btn-ghost" onclick="closeEdit()">Cancel</button><button class="btn btn-cyan" onclick="saveWO()" id="save-btn">SAVE WORK ORDER</button></div>
+</div>
+</div>
+
+<!-- QR TAG -->
+<div id="tag-modal" class="modal-bg" onclick="bgClose(event,'tag-modal')">
+<div class="modal-box lg">
+  <div class="m-hd"><span class="m-tag cy">QR TAG</span><div><div class="m-ttl">Work Order Tag</div><div class="m-sub">Scan QR to view live data</div></div><button class="m-x" onclick="closeTag()">✕</button></div>
+  <div class="m-body" id="tag-content"></div>
+  <div class="m-ft"><button class="btn btn-ghost" onclick="closeTag()">Close</button><button class="btn btn-cyan" id="print-btn" onclick="window.print()">🖨 Print Tag</button></div>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div id="set-modal" class="modal-bg" onclick="bgClose(event,'set-modal')">
+<div class="modal-box lg">
+  <div class="m-hd"><span class="m-tag bl">CONFIG</span><div><div class="m-ttl">System Settings</div><div class="m-sub">Manage areas and job types</div></div><button class="m-x" onclick="closeSettings()">✕</button></div>
+  <div class="m-body">
+    <div class="tab-strip">
+      <button class="tab-btn active" id="tab-a" onclick="switchTab('areas')">📍 Areas / Departments</button>
+      <button class="tab-btn" id="tab-t" onclick="switchTab('types')">🔧 Job Types</button>
+    </div>
+    <div id="set-list"></div>
+    <div class="add-row"><input class="fi" id="new-item" placeholder="Add new item..." onkeydown="if(event.key==='Enter')addItem()"><button class="btn btn-cyan" onclick="addItem()">ADD</button></div>
+  </div>
+</div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div id="del-modal" class="modal-bg" onclick="bgClose(event,'del-modal')">
+<div class="modal-box sm">
+  <div class="m-body" style="padding:28px 22px">
+    <div class="c-ico">⚠</div>
+    <div class="c-ttl">Delete Work Order?</div>
+    <div class="c-sub" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:var(--red-hi)">THIS ACTION CANNOT BE UNDONE</div>
+    <div class="c-row"><button class="btn btn-ghost" onclick="closeDel()">Cancel</button><button class="btn btn-red" onclick="doDel()">DELETE</button></div>
+  </div>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ════ FIREBASE CONFIG ════ */
+const firebaseConfig = {
+  apiKey:            "AIzaSyAad7GNxjfz3nzPeFtBkhB16fO54QAKmOw",
+  authDomain:        "fab-checklist-workshop.firebaseapp.com",
+  databaseURL:       "https://fab-checklist-workshop-default-rtdb.firebaseio.com",
+  projectId:         "fab-checklist-workshop",
+  storageBucket:     "fab-checklist-workshop.firebasestorage.app",
+  messagingSenderId: "80900940748",
+  appId:             "1:80900940748:web:0ab64b61d5bcc200fdf369"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const WO_REF = db.ref('workorders/items');
+const ST_REF = db.ref('workorders/settings');
+
+/* ════ CONSTANTS ════ */
+const DEF_AREAS = ['Production A','Production B','Maintenance','QC / ตรวจสอบ','Warehouse','Engineering'];
+const DEF_TYPES = ['งานเชื่อม','งานกลึง','งานประกอบ','งานซ่อมแก้ไข','อื่นๆ'];
+const ST = {
+  pending:    {key:'pending',    label:'⏳ รอดำเนินการ',   short:'PENDING',    act:'act-p'},
+  inProgress: {key:'inProgress', label:'⚙ กำลังดำเนินการ', short:'IN PROGRESS', act:'act-i'},
+  done:       {key:'done',       label:'✓ เสร็จสิ้น',       short:'DONE',        act:'act-d'},
+  hold:       {key:'hold',       label:'⛔ On Hold',         short:'ON HOLD',     act:'act-h'},
+};
+const VW_ROWS = [
+  {ico:'📍',lbl:'Area / Department',key:'area'},
+  {ico:'🔧',lbl:'Job Type',key:'jobType'},
+  {ico:'📅',lbl:'Date Received',key:'dateReceived',fmt:true},
+  {ico:'🎯',lbl:'Due Date',key:'dueDate',fmt:true},
+  {ico:'👤',lbl:'Requested By',key:'requestedBy'},
+  {ico:'🚦',lbl:'Priority',key:'priority'},
+];
+
+/* ════ STATE ════ */
+let wos=[],areas=[...DEF_AREAS],jobTypes=[...DEF_TYPES];
+let isAdmin=false,pwHash=null,filter='all',sq='',sTab='areas',editIdx=null;
+let editKey=null,delKey=null;
+
+/* ════ ROUTER ════ */
+const WO_ID = new URLSearchParams(location.search).get('wo');
+if(WO_ID){
+  document.getElementById('shell').style.display='none';
+  document.getElementById('viewer').style.display='block';
+  startViewer();
+} else { startDash(); }
+
+/* ════════ VIEWER ════════ */
+async function startViewer(){
+  hideLd();
+  try{
+    const snap = await db.ref('workorders/items/'+WO_ID).get();
+    if(!snap.exists()){ vwErr('ไม่พบ Work Order นี้<br><small style="font-size:11px;letter-spacing:.5px">อาจถูกลบไปแล้ว หรือ ID ไม่ถูกต้อง</small>'); return; }
+    const wo=snap.val();
+    document.title=(wo.woNumber||'WO')+' — '+wo.jobName;
+    document.getElementById('vw-bar').className='vw-top-bar st-'+(wo.status||'pending');
+    renderVW(wo);
+  }catch(e){ vwErr('ไม่สามารถโหลดข้อมูลได้<br><small style="font-size:11px">ตรวจสอบการเชื่อมต่ออินเตอร์เน็ต</small>'); }
+}
+function renderVW(wo){
+  const sc=ST[wo.status]||ST.pending;const isU=(wo.priority||'').includes('URGENT');
+  document.getElementById('vw-body').innerHTML=
+    '<p class="vw-wono">'+esc(wo.woNumber)+'</p>'+
+    '<p class="vw-name">'+esc(wo.jobName)+'</p>'+
+    '<div class="vw-badges"><span class="st-pill p-'+(wo.status||'pending')+'">'+sc.label+'</span>'+(isU?'<span class="urg-pill">! URGENT</span>':'')+'</div>'+
+    '<div class="vw-card"><p class="vw-card-lbl">Work Order Details</p>'+
+    VW_ROWS.map(r=>{var v=(r.fmt?fmtDate(wo[r.key]):wo[r.key])||'—';return'<div class="vw-row"><div class="vw-rio">'+r.ico+'</div><div><p class="vw-lbl">'+r.lbl+'</p><p class="vw-val">'+esc(v)+'</p></div></div>';}).join('')+
+    '</div>'+(wo.details?'<div class="vw-card"><p class="vw-card-lbl">Details / Notes</p><p class="vw-det">'+esc(wo.details)+'</p></div>':'');
+}
+function vwErr(msg){
+  document.getElementById('vw-body').innerHTML='<div class="vw-err"><div class="e-ico" style="font-size:36px">⚠</div><p style="font-size:13px;color:var(--mid);line-height:1.7;margin-top:8px">'+msg+'</p></div>';
+}
+
+/* ════════════════════════════════════════════════
+   DASHBOARD — startDash() แก้ไข v2.1
+   FIX: hideLd() เรียกทันที ไม่รอ Firebase callback
+════════════════════════════════════════════════ */
+async function startDash(){
+  // ✅ FIX 1: ซ่อน loading screen ทันที ไม่รอ Firebase
+  hideLd();
+
+  // ✅ FIX 2: แสดง spinner เล็กๆ ใน content area แทน
+  document.getElementById('content').innerHTML =
+    '<div class="empty-state">' +
+      '<div class="e-ring"></div>' +
+      '<div class="e-txt">CONNECTING TO DATABASE...</div>' +
+      '<div class="e-sub">กำลังเชื่อมต่อ Firebase Realtime Database</div>' +
+    '</div>';
+
+  // ✅ FIX 3: fallback — บังคับซ่อน loading ถ้ายังค้างอยู่หลัง 6 วินาที
+  setTimeout(hideLd, 6000);
+
+  try {
+    // Hash ของ workshop2024+WOS_v2_SALT — hardcode ไว้เลยไม่พึ่ง Firebase
+    pwHash = '6895b9ae20a5198183073f46d0b4a70342a13d12add16250511737118b5f63fd';
+
+    // โหลด settings (areas / jobTypes)
+    const ss = await ST_REF.once('value');
+    if(ss.exists()){
+      const d=ss.val();
+      if(d.areas) areas=toArr(d.areas);
+      if(d.jobTypes) jobTypes=toArr(d.jobTypes);
+    } else {
+      ST_REF.child('areas').set(DEF_AREAS);
+      ST_REF.child('jobTypes').set(DEF_TYPES);
+    }
+
+    // Subscribe to work orders (realtime)
+    WO_REF.on('value', snap=>{
+      const d=snap.val();
+      wos=d?Object.entries(d).map(([k,v])=>({...v,fbKey:k})).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)):[];
+      updateKPI(); buildNav(); render();
+    });
+
+  } catch(e) {
+    // แสดง error ใน content ถ้า Firebase ล้มเหลว
+    document.getElementById('content').innerHTML =
+      '<div class="empty-state">' +
+        '<div class="e-ico">⚠</div>' +
+        '<div class="e-txt">DATABASE CONNECTION ERROR</div>' +
+        '<div class="e-sub">ตรวจสอบการเชื่อมต่ออินเตอร์เน็ต แล้วรีเฟรชหน้า</div>' +
+        '<button class="btn btn-ghost" onclick="location.reload()" style="margin:14px auto 0">🔄 Reload</button>' +
+      '</div>';
+  }
+
+  document.getElementById('search-input').addEventListener('input',e=>{sq=e.target.value;render();});
+  document.getElementById('badge-pub').style.display='flex';
+}
+
+/* ── KPI ── */
+function updateKPI(){
+  const c={all:wos.length,pending:0,inProgress:0,done:0,hold:0};
+  wos.forEach(w=>{if(c[w.status]!==undefined)c[w.status]++;});
+  document.getElementById('k-all').textContent=c.all;
+  document.getElementById('k-pend').textContent=c.pending;
+  document.getElementById('k-prog').textContent=c.inProgress;
+  document.getElementById('k-done').textContent=c.done;
+  document.getElementById('k-hold').textContent=c.hold;
+  document.querySelectorAll('.kpi-row').forEach(r=>r.classList.remove('active'));
+  const map={all:'kpi-all',pending:'kpi-pend',inProgress:'kpi-prog',done:'kpi-done',hold:'kpi-hold'};
+  const el=document.getElementById(map[filter]); if(el) el.classList.add('active');
+}
+
+/* ── NAV ── */
+function buildNav(){
+  const el=document.getElementById('nav-types'); el.innerHTML='';
+  jobTypes.forEach(t=>{
+    const n=wos.filter(w=>w.jobType===t).length;
+    const b=document.createElement('button');
+    b.className='nav-item'+(filter==='type:'+t?' active':'');
+    b.innerHTML='<span class="nav-ico">🔧</span>'+esc(t)+'<span class="nav-ct">'+n+'</span>';
+    b.onclick=()=>{filter='type:'+t;updateKPI();buildNav();render();if(window.innerWidth<=768)closeSB();};
+    el.appendChild(b);
+  });
+}
+
+/* ── FILTER ── */
+function setFilter(f){
+  filter=f; updateKPI(); buildNav(); render();
+  if(window.innerWidth<=768) closeSB();
+}
+
+/* ── RENDER ── */
+function render(){
+  let list=wos;
+  if(filter==='all'){}
+  else if(filter.startsWith('type:')) list=list.filter(w=>w.jobType===filter.slice(5));
+  else list=list.filter(w=>w.status===filter);
+  const q=sq.toLowerCase();
+  if(q) list=list.filter(w=>[w.jobName,w.woNumber,w.area,w.jobType,w.details,w.requestedBy].some(v=>(v||'').toLowerCase().includes(q)));
+  const lbl=filter==='all'?'ALL ORDERS ('+wos.length+')':(filter.startsWith('type:')?filter.slice(5).toUpperCase():(ST[filter]?.short||filter));
+  document.getElementById('tb-cur').textContent=lbl;
+  const el=document.getElementById('content');
+  if(!list.length){
+    el.innerHTML='<div class="empty-state">'+(wos.length===0?'<div class="e-ico">📋</div>':'<div class="e-ico">🔍</div>')+
+    '<div class="e-txt">'+(wos.length===0?'NO WORK ORDERS FOUND':'NO RESULTS MATCH FILTER')+'</div>'+
+    '<div class="e-sub">'+(wos.length===0?'Use NEW WORK ORDER to create the first record':'Try adjusting your search or filter criteria')+'</div>'+
+    (wos.length===0&&isAdmin?'<button class="btn btn-cyan" onclick="openAdd()" style="margin:16px auto 0">+ NEW WORK ORDER</button>':'')+'</div>';
+    return;
+  }
+  el.innerHTML=list.map(woRow).join('');
+}
+
+function woRow(wo){
+  const sc=ST[wo.status]||ST.pending;const isU=(wo.priority||'').includes('URGENT');
+  const ctrl=isAdmin?`
+    <div class="wo-ctrl">
+      ${Object.values(ST).map(s=>`<button class="sc-btn${wo.status===s.key?' '+sc.act:''}" onclick="setStat('${wo.fbKey}','${s.key}')">${s.label}</button>`).join('')}
+      <div class="sc-divider"></div>
+      <button class="sc-btn sc-qr" onclick="showTag('${wo.fbKey}')">🏷 QR Tag</button>
+    </div>
+    <div class="wo-actions">
+      <button class="ra-btn" onclick="openEdit('${wo.fbKey}')" title="Edit">✏</button>
+      <button class="ra-btn del" onclick="askDel('${wo.fbKey}')" title="Delete">🗑</button>
+    </div>`:'';
+  return`<div class="wo-row">
+    <div class="wo-stripe ${wo.status||'pending'}"></div>
+    <div class="wo-body">
+      <div class="wo-top">
+        <span class="wo-num">${esc(wo.woNumber)}</span>
+        ${isU?'<span class="urg-pill">! URGENT</span>':''}
+        <span class="st-pill p-${wo.status||'pending'}">${sc.label}</span>
+      </div>
+      <div class="wo-name">${esc(wo.jobName)}</div>
+      <div class="wo-meta">
+        <span class="meta-chip"><span class="meta-ico">📍</span>${esc(wo.area)}</span>
+        <span class="meta-chip"><span class="meta-ico">🔧</span>${esc(wo.jobType)}</span>
+        <span class="meta-chip"><span class="meta-ico">📅</span>รับ ${fmtDate(wo.dateReceived)}</span>
+        <span class="meta-chip"><span class="meta-ico">🎯</span>ครบ ${fmtDate(wo.dueDate)||'—'}</span>
+        ${wo.requestedBy?`<span class="meta-chip"><span class="meta-ico">👤</span>${esc(wo.requestedBy)}</span>`:''}
+      </div>
+      ${wo.details?`<div class="wo-detail">${esc(wo.details)}</div>`:''}
+    </div>
+    ${ctrl}
+  </div>`;
+}
+
+/* ── STATUS ── */
+function setStat(key,st){
+  WO_REF.child(key+'/status').set(st);
+  const w=wos.find(x=>x.fbKey===key); if(w)w.status=st;
+  updateKPI(); render(); toast(ST[st]?.label||st,'ok');
+}
+
+/* ── QR TAG ── */
+function showTag(key){
+  const wo=wos.find(w=>w.fbKey===key); if(!wo) return;
+  const url=location.origin+location.pathname+'?wo='+key;
+  const q90 ='https://api.qrserver.com/v1/create-qr-code/?size=100x100&bgcolor=ffffff&color=000000&data='+encodeURIComponent(url)+'&margin=6';
+  const q180='https://api.qrserver.com/v1/create-qr-code/?size=180x180&bgcolor=ffffff&color=000000&data='+encodeURIComponent(url)+'&margin=6';
+  const sc=ST[wo.status]||ST.pending; const isU=(wo.priority||'').includes('URGENT');
+  document.getElementById('tag-content').innerHTML=
+    '<div class="tag-box">'+
+      '<div class="tag-hd">'+
+        '<div>'+
+          '<div class="tag-wono">'+esc(wo.woNumber)+'</div>'+
+          (isU?'<span class="urg-pill" style="margin-bottom:5px;display:inline-flex">! URGENT</span><br>':'')+
+          '<div class="tag-job">'+esc(wo.jobName)+'</div>'+
+        '</div>'+
+        '<div class="tag-qr-wrap"><img src="'+q90+'" width="100" height="100" alt="QR Code"></div>'+
+      '</div>'+
+      '<div class="tag-ft">'+
+        '<span>📍 '+esc(wo.area)+'&nbsp;&nbsp;|&nbsp;&nbsp;🔧 '+esc(wo.jobType)+'</span>'+
+        '<span>📅 รับ: '+fmtDate(wo.dateReceived)+'&nbsp;&nbsp;|&nbsp;&nbsp;🎯 ครบ: '+(fmtDate(wo.dueDate)||'—')+'</span>'+
+        (wo.requestedBy?'<span>👤 '+esc(wo.requestedBy)+'</span>':'')+
+        '<span class="st-pill p-'+(wo.status||'pending')+'" style="margin-top:6px;display:inline-flex">'+sc.label+'</span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="qr-center"><img src="'+q180+'" width="180" height="180" alt="QR Code ขนาดใหญ่"></div>'+
+    '<div class="url-block"><div class="url-lbl">🔗 Scan URL — Opens this work order live</div><a href="'+url+'" target="_blank" class="url-val">'+url+'</a></div>'+
+    '<p style="font-size:10px;color:var(--lo);text-align:center;font-family:var(--mono);letter-spacing:.5px">REQUIRES GITHUB PAGES HOSTING FOR QR SCAN</p>';
+  document.getElementById('tag-modal').classList.add('open');
+}
+function closeTag(){ document.getElementById('tag-modal').classList.remove('open'); }
+
+/* ── CREATE/EDIT ── */
+function fillSelects(){
+  document.getElementById('f-area').innerHTML=areas.map(a=>'<option>'+esc(a)+'</option>').join('');
+  document.getElementById('f-type').innerHTML=jobTypes.map(t=>'<option>'+esc(t)+'</option>').join('');
+}
+function openAdd(){
+  editKey=null; fillSelects();
+  document.getElementById('me-tag').textContent='NEW WO';
+  document.getElementById('me-ttl').textContent='Create Work Order';
+  document.getElementById('me-sub').textContent='Fill in all required fields';
+  ['f-wono','f-name','f-req','f-det'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-prio').value='ปกติ (NORMAL)';
+  document.getElementById('f-stat').value='pending';
+  document.getElementById('f-start').value=todayISO();
+  document.getElementById('f-due').value='';
+  document.getElementById('edit-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),150);
+}
+function openEdit(key){
+  const wo=wos.find(w=>w.fbKey===key); if(!wo) return;
+  editKey=key; fillSelects();
+  document.getElementById('me-tag').textContent='EDIT WO';
+  document.getElementById('me-ttl').textContent='Edit Work Order';
+  document.getElementById('me-sub').textContent=wo.woNumber;
+  document.getElementById('f-wono').value=wo.woNumber||'';
+  document.getElementById('f-name').value=wo.jobName||'';
+  document.getElementById('f-area').value=wo.area||areas[0];
+  document.getElementById('f-type').value=wo.jobType||jobTypes[0];
+  document.getElementById('f-prio').value=wo.priority||'ปกติ (NORMAL)';
+  document.getElementById('f-stat').value=wo.status||'pending';
+  document.getElementById('f-start').value=wo.dateReceived||'';
+  document.getElementById('f-due').value=wo.dueDate||'';
+  document.getElementById('f-req').value=wo.requestedBy||'';
+  document.getElementById('f-det').value=wo.details||'';
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); }
+async function saveWO(){
+  const name=document.getElementById('f-name').value.trim();
+  const area=document.getElementById('f-area').value;
+  const type=document.getElementById('f-type').value;
+  if(!name||!area||!type){toast('Fill in Job Name, Area and Type','warn');return;}
+  const sb=document.getElementById('save-btn'); sb.disabled=true; sb.textContent='SAVING...';
+  const data={woNumber:(document.getElementById('f-wono').value.trim()||genWO()),jobName:name,area,jobType:type,priority:document.getElementById('f-prio').value,status:document.getElementById('f-stat').value,dateReceived:document.getElementById('f-start').value,dueDate:document.getElementById('f-due').value,requestedBy:document.getElementById('f-req').value.trim(),details:document.getElementById('f-det').value.trim()};
+  if(editKey){await WO_REF.child(editKey).update(data);toast('Work Order updated','ok');}
+  else{await WO_REF.push({...data,createdAt:Date.now()});toast('Work Order created','ok');}
+  sb.disabled=false; sb.textContent='SAVE WORK ORDER'; closeEdit();
+}
+
+/* ── DELETE ── */
+function askDel(key){delKey=key;document.getElementById('del-modal').classList.add('open');}
+function closeDel(){document.getElementById('del-modal').classList.remove('open');}
+function doDel(){WO_REF.child(delKey).remove();closeDel();toast('Work Order deleted','ok');}
+
+/* ── SETTINGS ── */
+function openSettings(){sTab='areas';editIdx=null;renderSL();document.getElementById('set-modal').classList.add('open');}
+function closeSettings(){document.getElementById('set-modal').classList.remove('open');editIdx=null;}
+function switchTab(t){sTab=t;editIdx=null;document.getElementById('tab-a').classList.toggle('active',t==='areas');document.getElementById('tab-t').classList.toggle('active',t==='types');document.getElementById('new-item').value='';renderSL();}
+function curL(){return sTab==='areas'?areas:jobTypes;}
+function saveL(arr){if(sTab==='areas'){areas=arr;ST_REF.child('areas').set(arr);}else{jobTypes=arr;ST_REF.child('jobTypes').set(arr);buildNav();}}
+function renderSL(){
+  const items=curL(); const el=document.getElementById('set-list'); el.innerHTML='';
+  items.forEach((item,i)=>{
+    const d=document.createElement('div'); d.className='set-item';
+    if(editIdx===i){
+      const inp=document.createElement('input'); inp.className='fi'; inp.value=item; inp.style.flex='1'; inp.id='ei';
+      inp.onkeydown=e=>{if(e.key==='Enter')saveItem(i);};
+      const sv=mkBtn('Save','sv',()=>saveItem(i)); const cx=mkBtn('Cancel','cx',()=>{editIdx=null;renderSL();});
+      d.appendChild(inp); d.appendChild(sv); d.appendChild(cx);
+      setTimeout(()=>inp.focus(),40);
+    } else {
+      const dot=document.createElement('div'); dot.className='set-dot';
+      const sp=document.createElement('span'); sp.className='set-txt'; sp.textContent=item;
+      const sa=document.createElement('div'); sa.className='set-acts';
+      sa.appendChild(mkBtn('Edit','ed',()=>{editIdx=i;renderSL();}));
+      sa.appendChild(mkBtn('Delete','dl',()=>delItem(i)));
+      d.appendChild(dot); d.appendChild(sp); d.appendChild(sa);
+    }
+    el.appendChild(d);
+  });
+}
+function mkBtn(txt,cls,fn){const b=document.createElement('button');b.className='s-btn '+cls;b.textContent=txt;b.onclick=fn;return b;}
+function addItem(){const v=(document.getElementById('new-item').value||'').trim();if(!v)return;saveL([...curL(),v]);renderSL();document.getElementById('new-item').value='';toast('Item added','ok');}
+function saveItem(i){const inp=document.getElementById('ei');if(!inp)return;const v=inp.value.trim();if(!v)return;const arr=[...curL()];arr[i]=v;saveL(arr);editIdx=null;renderSL();toast('Item updated','ok');}
+function delItem(i){if(!confirm('Delete this item?'))return;const arr=[...curL()];arr.splice(i,1);saveL(arr);editIdx=null;renderSL();toast('Item deleted','ok');}
+
+/* ── AUTH ── */
+async function hashPw(pw){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw+'WOS_v2_SALT'));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+function openLogin(){document.getElementById('lp').value='';document.getElementById('lerr').style.display='none';document.getElementById('login-modal').classList.add('open');setTimeout(()=>document.getElementById('lp').focus(),120);}
+function closeLogin(){document.getElementById('login-modal').classList.remove('open');}
+async function doLogin(){const h=await hashPw(document.getElementById('lp').value);if(h===pwHash){isAdmin=true;closeLogin();applyMode();toast('AUTHENTICATED · Admin access granted','ok');}else{document.getElementById('lerr').style.display='block';document.getElementById('lp').select();}}
+function logout(){isAdmin=false;applyMode();toast('LOGGED OUT','warn');}
+function applyMode(){
+  const sh=(v,ids)=>ids.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=v?'flex':'none';});
+  sh(isAdmin,['btn-add','btn-set','btn-logout','fab','badge-adm']);
+  sh(!isAdmin,['btn-login','badge-pub']);
+  render();
+}
+
+/* ── HELPERS ── */
+function hideLd(){
+  const l=document.getElementById('loading-screen');
+  if(l){ l.classList.add('hidden'); setTimeout(()=>l.style.display='none',400); }
+}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtDate(d){if(!d)return'';try{const dt=new Date(d);return isNaN(dt)?d:dt.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return d;}}
+function todayISO(){return new Date().toISOString().split('T')[0];}
+function toArr(v){return Array.isArray(v)?v:Object.values(v);}
+function genWO(){const n=new Date();const yr=(n.getFullYear()+543).toString().slice(-2);const mo=String(n.getMonth()+1).padStart(2,'0');return'WO-'+yr+mo+'-'+(Math.floor(Math.random()*900)+100);}
+function bgClose(e,id){if(e.target.id===id)({'login-modal':closeLogin,'edit-modal':closeEdit,'tag-modal':closeTag,'set-modal':closeSettings,'del-modal':closeDel}[id]||function(){})();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLogin();closeEdit();closeTag();closeSettings();closeDel();}});
+let tT;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');el.innerHTML='';
+  const ico=document.createElement('span');ico.className=type==='ok'?'toast-ok':'toast-warn';ico.textContent=type==='ok'?'✓':'⚠';
+  const txt=document.createElement('span');txt.textContent=msg;
+  el.appendChild(ico);el.appendChild(txt);el.classList.add('show');
+  clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('show'),3200);
+}
+function toggleSB(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-overlay').classList.toggle('open');}
+function closeSB(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').classList.remove('open');}
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',e=>{if(e.changedTouches[0].clientX-tx<-60&&document.getElementById('sidebar').classList.contains('open'))closeSB();},{passive:true});
+</script>
+</body>
+</html>
