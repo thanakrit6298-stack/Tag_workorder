@@ -796,7 +796,7 @@ function showTag(key){
         '<span>📍 '+esc(wo.area)+'&nbsp;&nbsp;|&nbsp;&nbsp;🔧 '+esc(wo.jobType)+'</span>'+
         '<span>📅 รับ: '+fmtDate(wo.dateReceived)+'&nbsp;&nbsp;|&nbsp;&nbsp;🎯 ครบ: '+(fmtDate(wo.dueDate)||'—')+'</span>'+
         (wo.requestedBy?'<span>👤 '+esc(wo.requestedBy)+'</span>':'')+
-        '<span class="st-pill p-'+(wo.status||'pending')+'" style="margin-top:6px;display:inline-flex">'+sc.label+'</span>'+
+        '<span style="margin-top:8px;font-size:10px;color:#22d3ee;font-family:monospace;letter-spacing:.5px">📲 สแกน QR เพื่อดูสถานะงานปัจจุบัน</span>'+
       '</div>'+
     '</div>'+
     '<div class="qr-center"><img src="'+q180+'" width="180" height="180" alt="QR Code ขนาดใหญ่"></div>'+
