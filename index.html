@@ -388,11 +388,16 @@ body::before{
 @media print{
   #shell,#topbar,body>*:not(#tag-modal){display:none!important}
   .modal-bg{position:static;background:none;padding:0}
-  .modal-box{box-shadow:none;border:none}
-  .m-hd,.m-ft,.url-block,#print-btn{display:none!important}
-  .tag-box{border:2px dashed #999;background:#fff;color:#000}
-  .tag-wono,.tag-job,.tag-ft{color:#000}
-  body{background:#fff}
+  .modal-box{box-shadow:none;border:none;max-width:100%!important}
+  .m-hd,.m-ft,.url-block,#print-btn,.qr-center{display:none!important}
+  .tag-box{border:2px dashed #999;background:#fff;color:#000;padding:24px}
+  .tag-wono{color:#000!important;font-size:15px!important;letter-spacing:1px}
+  .tag-job{color:#000!important;font-size:24px!important;font-weight:800!important;max-width:none!important}
+  .tag-ft{color:#000!important;font-size:14px!important;gap:7px!important}
+  .tag-ft span{color:#000!important;font-size:14px!important}
+  .urg-pill{font-size:13px!important;padding:4px 14px!important}
+  .tag-qr-wrap img{width:150px!important;height:150px!important}
+  body{background:#fff;font-size:16px}
 }
 </style>
 </head>
@@ -779,8 +784,7 @@ function setStat(key,st){
 function showTag(key){
   const wo=wos.find(w=>w.fbKey===key); if(!wo) return;
   const url=location.origin+location.pathname+'?wo='+key;
-  const q90 ='https://api.qrserver.com/v1/create-qr-code/?size=100x100&bgcolor=ffffff&color=000000&data='+encodeURIComponent(url)+'&margin=6';
-  const q180='https://api.qrserver.com/v1/create-qr-code/?size=180x180&bgcolor=ffffff&color=000000&data='+encodeURIComponent(url)+'&margin=6';
+  const q150='https://api.qrserver.com/v1/create-qr-code/?size=150x150&bgcolor=ffffff&color=000000&data='+encodeURIComponent(url)+'&margin=6';
   const sc=ST[wo.status]||ST.pending; const isU=(wo.priority||'').includes('URGENT');
   document.getElementById('tag-content').innerHTML=
     '<div class="tag-box">'+
@@ -790,7 +794,7 @@ function showTag(key){
           (isU?'<span class="urg-pill" style="margin-bottom:5px;display:inline-flex">! URGENT</span><br>':'')+
           '<div class="tag-job">'+esc(wo.jobName)+'</div>'+
         '</div>'+
-        '<div class="tag-qr-wrap"><img src="'+q90+'" width="100" height="100" alt="QR Code"></div>'+
+        '<div class="tag-qr-wrap"><img src="'+q150+'" width="150" height="150" alt="QR Code"></div>'+
       '</div>'+
       '<div class="tag-ft">'+
         '<span>📍 '+esc(wo.area)+'&nbsp;&nbsp;|&nbsp;&nbsp;🔧 '+esc(wo.jobType)+'</span>'+
